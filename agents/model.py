@@ -8,6 +8,7 @@ from langchain_core.messages import HumanMessage
 from system_prompts.prompts import system_prompt
 import os
 from enum import Enum
+from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 memory = MemorySaver()
 
@@ -15,6 +16,7 @@ memory = MemorySaver()
 class AgentModel(str,Enum):
     CLAUDE = "claude"
     QWEN = "qwen"
+
 
 async def create_mcp_agent(model : AgentModel):
 
@@ -25,12 +27,10 @@ async def create_mcp_agent(model : AgentModel):
             model="claude-sonnet-4-6"
         )
     else:
-        llm = ChatOpenAI(
-            model="qwen-3-235b-a22b-instruct-2507",   
-            api_key=os.getenv("CEREBRAS"),
-            base_url="https://api.cerebras.ai/v1",
-            temperature=0,
-            model_kwargs={"parallel_tool_calls": True}
+        print("created gemeini llm object...")
+        llm = ChatGoogleGenerativeAI(
+            google_api_key=os.getenv("GEMINI_API_KEY"),
+            model="gemini-2.5-flash"
         )
 
 
@@ -58,16 +58,24 @@ async def create_mcp_agent(model : AgentModel):
 
     return agent
 
-
 async def llm_messages(agent, user_input: str, config_id: str) -> str:
-
-
     if user_input:
         config = {"configurable": {"thread_id": config_id}}
         response = await agent.ainvoke(
             {"messages": [HumanMessage(content=user_input)]},
             config
         )
-        return response["messages"][-1].content
+        content = response["messages"][-1].content
+
+        
+        if isinstance(content, list):
+            text_parts = [
+                block["text"] for block in content
+                if isinstance(block, dict) and block.get("type") == "text"
+            ]
+            content = "\n".join(text_parts)
+
+        print(content)
+        return content
     else:
         return "Hi! I am your helpful assistant."
