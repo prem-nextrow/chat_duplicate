@@ -7,16 +7,32 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage
 from system_prompts.prompts import system_prompt
 import os
+from enum import Enum
 load_dotenv()
 memory = MemorySaver()
 
 
-async def create_mcp_agent():
+class AgentModel(str,Enum):
+    CLAUDE = "claude"
+    QWEN = "qwen"
 
-    llm = ChatAnthropic(
-        api_key=os.getenv("ANTHROPIC_API_KEY"),
-        model="claude-sonnet-4-6"
-    )
+async def create_mcp_agent(model : AgentModel):
+
+    
+    if(model == AgentModel.CLAUDE):
+        llm = ChatAnthropic(
+            api_key=os.getenv("ANTHROPIC_API_KEY"),
+            model="claude-sonnet-4-6"
+        )
+    else:
+        llm = ChatOpenAI(
+            model="qwen-3-235b-a22b-instruct-2507",   
+            api_key=os.getenv("CEREBRAS"),
+            base_url="https://api.cerebras.ai/v1",
+            temperature=0,
+            model_kwargs={"parallel_tool_calls": True}
+        )
+
 
 
     mcp_url = "http://localhost:8001"
